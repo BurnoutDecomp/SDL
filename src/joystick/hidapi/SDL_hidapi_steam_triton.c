@@ -680,8 +680,14 @@ static bool HIDAPI_DriverSteamTriton_SendJoystickEffect(SDL_HIDAPI_Device *devic
         }
 
         if (size == expected_size) {
-            // Require the complete output report to be written
-            return SDL_hid_write(device->dev, data, size) == size;
+            // Require the complete output report to be written. The Windows
+            // backend pads short reports to the device's output report length
+            // and returns that padded byte count, so more than size is success.
+            const int rc = SDL_hid_write(device->dev, data, size);
+            if (rc < size) {
+                return SDL_SetError("Couldn't write Steam Controller haptic report (rc=%d)", rc);
+            }
+            return true;
         }
     }
 
